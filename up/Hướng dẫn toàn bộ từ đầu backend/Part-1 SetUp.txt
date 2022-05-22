@@ -1,0 +1,23 @@
+Cài nodejs:https://nodejs.org/en/
+cài vscode
+npm install -g expo-cli
+expo init mobile
+Cài mongo https://www.mongodb.com/
+Cài Postmain
+Cài robo3t
+Cài mongodb Compass
+
+/backend
+npm init -y
+npm i nodemon express dotenv mongoose colors
+
+server.js
+app.mvc
+app.parse
+app.connect
+
+.env
+
+PORT=5000
+URI=mongodb+srv://phuong:iBn5rfuB5EI5yPWD@note.stjg5.mongodb.net/mobile?retryWrites=true&w=majority
+

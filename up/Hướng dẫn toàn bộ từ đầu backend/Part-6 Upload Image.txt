@@ -1,0 +1,59 @@
+npm i multer
+
+const multer = require("multer");
+const FILE_TYPE_MAP={
+  "image/png":"png",
+  "image/jpg":"jpg",
+  "image/jpeg":"jpeg",
+}
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const isVaild=FILE_TYPE_MAP[file.mimetype]
+    let uploadErr=new Error("isVaild image type");
+    if(isVaild){
+      uploadErr=null
+    }
+    cb(uploadErr, 'public/upload')
+  },
+  filename: function (req, file, cb) {
+    const fileName = file.originalname.split(" ").join("-")
+    const extension=FILE_TYPE_MAP[file.mimetype]
+    cb(null, `${fileName}-${Date.now()}.${extension}`)
+  }
+})
+ 
+const upload = multer({ storage: storage })
+
+upload.single('image')
+
+const {filename} = req.file;
+const basePath=`${req.protocol}://${req.get("host")}/public/upload/`
+
+image:`${basePath}${filename}`
+
+router
+  .put("/product/image/:id", auth, authAdmin, upload.array("images",10),productCtrl.updateImage)
+
+  updateImage: async (req, res) => {
+    try {
+      const files=req.files;
+      const imagesPaths=[];
+      const basePath=`${req.protocol}://${req.get("host")}/public/upload/`
+      if(files){
+        files.map(file =>{
+          imagesPaths.push(`${basePath}${file.filename}`)
+        })
+      }
+      const { id } = req.params;
+      const product=await Product.findByIdAndUpdate(id, { images: imagesPaths});
+      res.json(product);
+
+    } catch (error) {
+      return res.status(500).json({ message: error.message });
+    }
+  },
+  
+npm i cors
+const cors = require("cors")
+app.use(cors())
+app.use("/public/upload", express.static(__dirname+"/public/upload"));

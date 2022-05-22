@@ -1,0 +1,161 @@
+npm i jsonwebtoken
+npm i bcrypt
+const userRouter= require("./routers/userRouter")
+app.use(userRouter)
+
+const router = require("express").Router();
+const userCtrl = require("../controllers/userCtrl");
+
+router
+  .get("/user", userCtrl.listUser)
+  .post("/user/login", userCtrl.login)
+  .post("/user/register", userCtrl.register);
+module.exports = router;
+
+const Users = require("../models/userModel");
+const authAdmin = async (req, res, next) => {
+  try {
+    const user = await Users.findOne({ _id: req.user.id });
+    //role==0->user,1->admin
+    if (!user.isAdmin) {
+      return res.status(400).json({ msg: "admin resources access denied" });
+    }
+    next();
+  } catch (error) {
+    return res.status(500).json({ msg: error.message });
+  }
+};
+module.exports = authAdmin;
+
+const mongoose = require("mongoose");
+const userSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+    },
+    email: {
+      type: String,
+      required: true,
+    },
+    password: {
+      type: String,
+      required: true,
+    },
+    phone: {
+      type: String,
+      required: true,
+    },
+    isAdmin: {
+      type: Boolean,
+      default: false,
+    },
+    street: {
+      type: String,
+      default: "",
+    },
+    apartment: {
+      type: String,
+      default: "",
+    },
+    zip: {
+      type: String,
+      default: "",
+    },
+    country: {
+      type: String,
+      default: "",
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+module.exports = mongoose.model("User", userSchema);
+
+const Users = require("../models/userModel");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const userCtrl = {
+  listUser: async (req, res) => {
+    try {
+      const user = await Users.find();
+      res.json(user);
+    } catch (error) {
+      return res.status(500).json({ msg: error.message });
+    }
+  },
+  register: async (req, res) => {
+    try {
+      const { name, email, password, phone } = req.body;
+      const user = await Users.findOne({ email });
+      if (user)
+        return res.status(400).json({ msg: "The email already exists" });
+      if (password.length < 6)
+        return res.status(400).json({ msg: "password is at the 6 char" });
+      const passwordHash = await bcrypt.hash(password, 10);
+      const newUser = await Users({
+        name,
+        email,
+        password: passwordHash,
+        phone,
+      });
+      await newUser.save();
+      const accesstoken = jwt.sign({ userId: newUser._id }, process.env.ACCESS, {
+        expiresIn: "1d",
+      });
+      res.json({ accesstoken });
+    } catch (error) {
+      return res.status(500).json({ msg: error.message });
+    }
+  },
+  login: async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      const user = await Users.findOne({ email });
+      if (!user) return res.status(400).json({ msg: "User does not exists" });
+      const isWatch = await bcrypt.compare(password, user.password);
+      if (!isWatch) return res.status(400).json({ msg: "incorrect password" });
+      const accesstoken = jwt.sign({ userId: user._id }, process.env.ACCESS, {
+        expiresIn: "1d",
+      });
+      res.json({ accesstoken });
+    } catch (error) {
+      return res.status(500).json({ msg: error.message });
+    }
+  },
+};
+module.exports = userCtrl;
+
+const jwt = require("jsonwebtoken");
+const auth = (req, res, next) => {
+  try {
+    const token = req.header("Authorization");
+    if (!token) return res.status(400).json({ msg: "Invalid Authorization" });
+    jwt.verify(token, process.env.ACCESS, (err, user) => {
+      if (err) return res.status(400).json({ msg: "Invalid Authorization" });
+      req.user = user;
+      next();
+    });
+  } catch (error) {
+    return res.status(500).json({ msg: error.message });
+  }
+};
+module.exports = auth;
+const Users = require("../models/userModel");
+const authAdmin = async (req, res, next) => {
+  try {
+    const user = await Users.findOne({ _id: req.user.userId });
+    if (!user.isAdmin) {
+      return res.status(400).json({ msg: "admin resources access denied" });
+    }
+    next();
+  } catch (error) {
+    return res.status(500).json({ msg: error.message });
+  }
+};
+module.exports = authAdmin;
+
+const auth = require("../middleware/auth")
+const authAdmin =require("../middleware/authAdmin")
